@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Cards{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="{{ 'on' if side == 'hero' }}" href="{{ url_for('cards', **args_with(side='hero', min=min_games, lands='1' if show_lands else '')) }}">My cards</a>
+  <a class="{{ 'on' if side == 'opp' }}" href="{{ url_for('cards', **args_with(side='opp', min=min_games, lands='1' if show_lands else '')) }}">Opponents' cards</a>
+  <span class="small" style="margin-left: 12px">Min. games</span>
+  {% for n in [1, 3, 5, 10, 20] %}
+  <a class="{{ 'on' if min_games == n }}" href="{{ url_for('cards', **args_with(side=side, min=n, lands='1' if show_lands else '')) }}">{{ n }}</a>
+  {% endfor %}
+  <a class="{{ 'on' if show_lands }}" style="margin-left: 12px" href="{{ url_for('cards', **args_with(side=side, min=min_games, lands='' if show_lands else '1')) }}">{{ 'Hide' if show_lands else 'Show' }} lands</a>
+</div>
+
+{% if side == 'hero' %}
+<h2>My cards</h2>
+<p class="sub">
+  A card counts as <em>seen</em> in a game when you cast or played it. <strong>WR seen</strong> is your game win rate in those games;
+  <strong>vs. not seen</strong> is the difference from games in the current filter where it never resolved.
+  {% if not filters.deck %}<br>Pick a single deck in "My deck" above - otherwise "not seen" mixes in games from other decks.{% endif %}
+  Baseline game win rate: <strong>{{ pct(baseline.wr) }}</strong> over {{ baseline.n }} games.
+</p>
+{% else %}
+<h2>Opponents' cards</h2>
+<p class="sub">Cards your opponents cast or played. <strong>My WR</strong> is your game win rate in games where they resolved it - low values are the cards that beat you.
+  Baseline game win rate: <strong>{{ pct(baseline.wr) }}</strong> over {{ baseline.n }} games.</p>
+{% endif %}
+
+<div class="table-wrap">
+<table class="sortable">
+  <thead><tr>
+    <th data-sort="text">Card</th>
+    <th class="num" data-sort="num" title="Games where the card was cast or played">Games</th>
+    <th class="num" data-sort="num" title="Share of games in the filter where it was seen">% of games</th>
+    <th class="num" data-sort="num" title="Total times cast/played">Casts</th>
+    <th class="num" data-sort="num">{{ 'WR seen' if side == 'hero' else 'My WR' }}</th>
+    <th class="num" data-sort="num" title="95% Wilson confidence interval">95% CI</th>
+    <th class="num" data-sort="num">{{ 'WR not seen' if side == 'hero' else 'My WR otherwise' }}</th>
+    <th class="num" data-sort="num" title="WR seen minus WR not seen, percentage points">Difference</th>
+    <th class="num" data-sort="num" title="Win rate in games where it came down on turn 3 or earlier">WR cast by T3</th>
+    <th class="num" data-sort="num" title="Average turn it first came down">Avg turn</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.card }}{% if r.land %} <span class="small">land</span>{% endif %}</td>
+      <td class="num">{{ r.games }}</td>
+      <td class="num" data-v="{{ r.share }}">{{ pct(r.share) }}</td>
+      <td class="num">{{ r.casts }}</td>
+      <td class="num" data-v="{{ r.wr }}" title="{{ r.wins }}-{{ r.games - r.wins }}">{{ pct(r.wr) }}<span class="meter"><i style="width: {{ (r.wr * 100)|round(1) }}%"></i></span></td>
+      <td class="num muted" data-v="{{ r.lo }}">{{ pct(r.lo) }}–{{ pct(r.hi) }}</td>
+      <td class="num" data-v="{{ r.wr_not if r.wr_not is not none else '' }}">{{ pct(r.wr_not) }} <span class="small">({{ r.n_not }})</span></td>
+      <td class="num" data-v="{{ r.delta if r.delta is not none else '' }}">
+        {% if r.delta is not none %}
+          {{ '%+.0f'|format(r.delta * 100) }} pp
+          {% set w = [r.delta|abs * 100, 50]|min %}
+          <span class="delta"><i class="{{ 'pos' if r.delta >= 0 else 'neg' }}" style="width: {{ w }}%"></i></span>
+        {% else %}-{% endif %}
+      </td>
+      <td class="num {{ 'muted' if r.early_n < 5 }}" data-v="{{ r.early_wr if r.early_wr is not none else '' }}">{{ pct(r.early_wr) }} <span class="small">({{ r.early_n }})</span></td>
+      <td class="num" data-v="{{ r.avg_turn }}">{{ r.avg_turn|round(1) }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="10" class="muted">No cards meet the minimum-games threshold for this filter.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="small">Caveat: "seen" is biased - long games show more cards, and cards you cast while winning look better than they are. Read the difference as a pointer, not proof; the confidence interval shows how much the sample can carry. Each half of the difference bar spans 0 to 50 pp (blue = better when seen, red = worse).</p>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import wr_cell, record_cell, small_wr with context %}
+{% block title %}Decks{% endblock %}
+{% macro group_table(rows, link_key, first_col) %}
+<div class="table-wrap">
+<table class="sortable">
+  <thead><tr>
+    <th data-sort="text">{{ first_col }}</th>
+    <th class="num" data-sort="num">Matches</th>
+    <th class="num" data-sort="num">Match WR</th>
+    <th class="num" data-sort="num">Games</th>
+    <th class="num" data-sort="num">Game WR</th>
+    <th class="num" data-sort="num">On play</th>
+    <th class="num" data-sort="num">On draw</th>
+    <th data-sort="text">Last played</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td><a href="{{ url_for('overview', **args_with(**{link_key: r.label})) }}">{{ r.label }}</a></td>
+      {{ record_cell(r) }}
+      {{ wr_cell(r) }}
+      {{ record_cell(r.game) }}
+      {{ small_wr(r.game) }}
+      {{ small_wr(r.play) }}
+      {{ small_wr(r.draw) }}
+      <td class="muted">{{ r.last.strftime("%Y-%m-%d") }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}
+
+{% block content %}
+<h2>My decks</h2>
+<p class="sub">Decks are named by commander, or by their most-played cards in formats without one. Click a deck to filter every page by it.</p>
+{{ group_table(decks, "deck", "Deck") }}
+
+<h2 style="margin-top: 28px">Matchups</h2>
+<p class="sub">{% if filters.deck %}{{ filters.deck }} against each opposing deck.{% else %}All your decks against each opposing deck - pick "My deck" above for a single deck's matchup table.{% endif %} Hover a win rate for its record and confidence interval.</p>
+{{ group_table(matchups, "opp_deck", "Opponent deck") }}
+
+<h2 style="margin-top: 28px">Opponents</h2>
+<p class="sub">Players you have faced, most frequent first.</p>
+{{ group_table(opponents, "opponent", "Opponent") }}
+{% endblock %}

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MTGO Stats{% endblock %} · {{ store.hero }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='charts.js') }}"></script>
+</head>
+<body>
+<header>
+  <div class="brand">MTGO Stats</div>
+  <nav>
+    {% set ep = request.endpoint %}
+    <a href="{{ url_for('overview', **args_with()) }}" class="{{ 'active' if ep == 'overview' }}">Overview</a>
+    <a href="{{ url_for('decks', **args_with()) }}" class="{{ 'active' if ep == 'decks' }}">Decks &amp; matchups</a>
+    <a href="{{ url_for('cards', **args_with()) }}" class="{{ 'active' if ep == 'cards' }}">Cards</a>
+    <a href="{{ url_for('matches', **args_with()) }}" class="{{ 'active' if ep in ('matches', 'match') }}">Matches</a>
+  </nav>
+  <div class="meta">
+    <span>Player <strong>{{ store.hero or "?" }}</strong> · {{ store.matches|length }} matches · loaded {{ store.loaded_at.strftime("%H:%M") }}</span>
+    {% if store.errors %}<span title="{{ store.errors|join('\n') }}">{{ store.errors|length }} unreadable logs</span>{% endif %}
+    <form method="post" action="{{ url_for('rescan') }}"><button type="submit">Rescan logs</button></form>
+  </div>
+</header>
+
+{% if request.endpoint != 'match' %}
+<form class="filters" method="get">
+  {% for k, v in request.args.items() if k not in filters %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <label>Period
+    <select name="period" onchange="this.form.submit()">
+      {% for p in periods %}<option value="{{ p }}" {{ 'selected' if (filters.period or 'all') == p }}>{{ 'All time' if p == 'all' else 'Last ' ~ p[:-1] ~ ' days' }}</option>{% endfor %}
+    </select>
+  </label>
+  {% if format_options|length > 1 %}
+  <label>Format
+    <select name="fmt" onchange="this.form.submit()">
+      <option value="">All formats</option>
+      {% for f in format_options %}<option {{ 'selected' if filters.fmt == f }}>{{ f }}</option>{% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  <label>My deck
+    <select name="deck" onchange="this.form.submit()">
+      <option value="">All decks</option>
+      {% for d in deck_options %}<option {{ 'selected' if filters.deck == d }}>{{ d }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Opponent deck
+    <select name="opp_deck" onchange="this.form.submit()">
+      <option value="">All opponent decks</option>
+      {% for d in opp_deck_options %}<option {{ 'selected' if filters.opp_deck == d }}>{{ d }}</option>{% endfor %}
+    </select>
+  </label>
+  {% if filters.opponent %}
+  <label>Opponent
+    <select name="opponent" onchange="this.form.submit()">
+      <option value="">Any opponent</option><option selected>{{ filters.opponent }}</option>
+    </select>
+  </label>
+  {% endif %}
+  {% if filters.values()|select|list %}<a href="?">Clear filters</a>{% endif %}
+</form>
+{% endif %}
+
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>

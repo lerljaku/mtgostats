@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Matches{% endblock %}
+{% block content %}
+<h2>Matches</h2>
+<p class="sub">{{ matches|length }} matches, newest first. Click a row's date for the game-by-game log.</p>
+<div class="table-wrap">
+<table class="sortable">
+  <thead><tr>
+    <th data-sort="text">Date</th>
+    <th data-sort="text">Result</th>
+    <th data-sort="text">Games</th>
+    <th data-sort="text">My deck</th>
+    <th data-sort="text">Opponent</th>
+    <th data-sort="text">Opponent deck</th>
+    <th data-sort="text">Play/draw (G1)</th>
+    <th class="num" data-sort="num">Minutes</th>
+  </tr></thead>
+  <tbody>
+  {% for m in matches %}
+    {% set w = m.games|selectattr('winner', 'equalto', m.hero)|list|length %}
+    {% set l = m.games|selectattr('winner', 'equalto', m.opponent)|list|length %}
+    <tr>
+      <td data-v="{{ m.start.isoformat() }}"><a href="{{ url_for('match', match_id=m.id) }}">{{ m.start.strftime("%Y-%m-%d %H:%M") }}</a></td>
+      <td><span class="wl {{ m.result }}">{{ {'W': 'Win', 'L': 'Loss'}.get(m.result, 'Unfinished') }}</span></td>
+      <td>{{ w }}-{{ l }} <span class="small">{% for g in m.games %}{{ 'W' if g.winner == m.hero else ('L' if g.winner else '?') }}{% endfor %}</span></td>
+      <td>{{ m.hero_deck }}</td>
+      <td><a href="{{ url_for('decks', **args_with(opponent=m.opponent)) }}">{{ m.opponent }}</a></td>
+      <td>{{ m.opp_deck }}</td>
+      <td>{{ 'Play' if m.games[0].on_play == m.hero else ('Draw' if m.games[0].on_play else '-') }}</td>
+      <td class="num" data-v="{{ m.minutes }}">{{ m.minutes|round|int }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

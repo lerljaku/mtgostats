@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import wrbars with context %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+{% set mr = ov.match %}{% set gr = ov.game %}
+<div class="tiles">
+  <div class="tile hero">
+    <div class="label">Match win rate</div>
+    <div class="value">{{ pct(mr.wr) }}</div>
+    <div class="note">{{ mr.wins }}-{{ mr.losses }} · 95% CI {{ pct(mr.lo) }}–{{ pct(mr.hi) }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">Game win rate</div>
+    <div class="value">{{ pct(gr.wr) }}</div>
+    <div class="note">{{ gr.wins }}-{{ gr.losses }} games</div>
+  </div>
+  <div class="tile">
+    <div class="label">On the play / draw</div>
+    <div class="value">{{ pct(ov.play_draw[0].wr) }} / {{ pct(ov.play_draw[1].wr) }}</div>
+    <div class="note">{{ ov.play_draw[0].n }} / {{ ov.play_draw[1].n }} games</div>
+  </div>
+  <div class="tile">
+    <div class="label">Streak</div>
+    <div class="value">{{ ov.streaks.current }}</div>
+    <div class="note">best {{ ov.streaks.best_win }}W · worst {{ ov.streaks.worst_loss }}L</div>
+  </div>
+  <div class="tile">
+    <div class="label">Average game</div>
+    <div class="value">{{ ov.avg_turns|round(1) }} turns</div>
+    <div class="note">{{ ov.avg_minutes|round(1) }} minutes</div>
+  </div>
+  <div class="tile">
+    <div class="label">Concessions</div>
+    <div class="value">{{ ov.conceded_by_opp }} / {{ ov.conceded_by_hero }}</div>
+    <div class="note">by opponents / by you{% if ov.incomplete %} · {{ ov.incomplete }} unfinished matches{% endif %}</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card wide">
+    <h2>Match win rate over time</h2>
+    <p class="sub">Rolling over the last 20 matches vs. all-time cumulative. Hover for each match.</p>
+    <div class="legend">
+      <span><i class="key" style="background: var(--series-1)"></i>Rolling 20</span>
+      <span><i class="key" style="background: var(--series-2)"></i>Cumulative</span>
+    </div>
+    <div class="chart trend" data-points='{{ trend|tojson }}' data-rolling-label="Rolling 20"></div>
+  </div>
+
+  {{ wrbars("Play vs draw", "Game win rate by who went first.", ov.play_draw) }}
+  {{ wrbars("Pre-board vs post-board", "Game 1 against the sideboarded games.", ov.game_no) }}
+  {{ wrbars("After game 1", "Match win rate once game 1 is decided - how often you close out or come back.", ov.after_g1) }}
+  {{ wrbars("Die roll", "Match win rate when you won or lost the opening roll.", ov.roll) }}
+  {{ wrbars("Your mulligans", "Game win rate by your number of mulligans.", ov.hero_mull) }}
+  {{ wrbars("Opponent mulligans", "Game win rate by the opponent's mulligans.", ov.opp_mull) }}
+  {{ wrbars("Game length", "Game win rate by the last turn reached (turns counted per round).", ov.length) }}
+  {{ wrbars("Game duration", "Game win rate by wall-clock length.", ov.duration) }}
+  {{ wrbars("Mana", "Game win rate by whether you made a land drop on each of turns 1-3.", lands) }}
+  {{ wrbars("Day of week", "Match win rate by the day the match started.", ov.weekday) }}
+  {{ wrbars("Time of day", "Match win rate by local start time.", ov.hour) }}
+</div>
+<p class="small">Bars show win rate; the dark whisker is the 95% confidence interval and the vertical line marks 50%. Wide whiskers mean the sample is too small to trust.</p>
+{% endblock %}

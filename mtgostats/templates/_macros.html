@@ -1,0 +1,21 @@
+{% macro wr_cell(r) -%}
+<td class="num" data-v="{{ r.wr if r.wr is not none else '' }}" title="{{ r.wins }}-{{ r.losses }} · 95% CI {{ pct(r.lo) }}–{{ pct(r.hi) }}">
+  {{ pct(r.wr) }}{% if r.wr is not none %}<span class="meter"><i style="width: {{ (r.wr * 100)|round(1) }}%"></i></span>{% endif %}
+</td>
+{%- endmacro %}
+
+{% macro record_cell(r) -%}
+<td class="num" data-v="{{ r.n }}">{{ r.wins }}-{{ r.losses }}</td>
+{%- endmacro %}
+
+{% macro small_wr(r) -%}
+<td class="num {{ 'muted' if r.n < 5 }}" data-v="{{ r.wr if r.wr is not none else '' }}" title="{{ r.wins }}-{{ r.losses }}">{{ pct(r.wr) }} <span class="small">({{ r.n }})</span></td>
+{%- endmacro %}
+
+{% macro wrbars(title, sub, rows) -%}
+<div class="card">
+  <h2>{{ title }}</h2>
+  {% if sub %}<p class="sub">{{ sub }}</p>{% endif %}
+  <div class="chart wrbars" data-rows='{{ rows|tojson }}'></div>
+</div>
+{%- endmacro %}

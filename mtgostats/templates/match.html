@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ m.hero }} vs {{ m.opponent }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('matches') }}">&larr; All matches</a></p>
+<h2>{{ m.hero }} ({{ m.hero_deck }}) vs {{ m.opponent }} ({{ m.opp_deck }})</h2>
+<p class="sub">
+  {{ m.format }} · {{ m.start.strftime("%Y-%m-%d %H:%M") }} · {{ m.minutes|round|int }} minutes ·
+  <span class="wl {{ m.result }}">{{ {'W': 'Win', 'L': 'Loss'}.get(m.result, 'Unfinished') }}</span>
+  {% if m.rolls %} · die roll {% for p, r in m.rolls.items() %}{{ p }} {{ r }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}
+</p>
+
+<div class="grid">
+{% for g in m.games %}
+  <div class="card">
+    <h2>Game {{ g.number }} ·
+      <span class="wl {{ 'W' if g.winner == m.hero else ('L' if g.winner else '') }}">
+        {{ 'Win' if g.winner == m.hero else ('Loss' if g.winner else 'No result') }}</span></h2>
+    <p class="sub">
+      {{ 'On the play' if g.on_play == m.hero else ('On the draw' if g.on_play else 'Play/draw unknown') }} ·
+      {{ g.turns }} turns · {{ g.minutes|round(1) }} min · ended by {{ g.end_reason }}{% if g.conceded_by %} ({{ g.conceded_by }}){% endif %} ·
+      hands {{ g.hand_size.get(m.hero, '?') }} vs {{ g.hand_size.get(m.opponent, '?') }}
+    </p>
+    {% for player in [m.hero, m.opponent] %}
+      {% set cards = g.cards.get(player, {}) %}
+      <p><strong>{{ player }}</strong> <span class="small">cast/played {{ cards|length }} cards:</span><br>
+      <span class="small">{% for c, t in cards|dictsort(by='value') %}{{ c }} <span title="first on turn {{ t }}">(T{{ t }})</span>{{ ', ' if not loop.last }}{% endfor %}</span></p>
+    {% endfor %}
+    <details>
+      <summary class="small">Full log ({{ g.events|length }} lines)</summary>
+      <div class="log">
+      {% for ts, turn, actor, text in g.events %}
+        <div class="{{ 'turn' if text.startswith('Turn ') else ('end' if 'wins the' in text or 'conceded' in text else ('hero' if actor == m.hero else '')) }}">{{ ts.strftime("%H:%M:%S") }} {{ text }}</div>
+      {% endfor %}
+      </div>
+    </details>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}
