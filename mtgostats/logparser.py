@@ -24,6 +24,10 @@ HAND_RE = re.compile(r"begins the game with (\w+) cards? in hand")
 JOINED_RE = re.compile(r"^@P@P(.+) joined the game\.$")
 ROLLED_RE = re.compile(r"^@P(.+) rolled a (\d+)\.$")
 MATCH_WIN_RE = re.compile(r"wins the match (\d+)-(\d+)")
+# Lines where the first card is the acting player's own card doing something.
+USE_PREFIXES = ("casts @[", "plays @[", "discards @[", "cycles @[",
+                "puts a triggered ability from @[", "activates an ability of @[",
+                "chooses to use @[")
 
 NUMBER_WORDS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
                 "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
@@ -96,6 +100,10 @@ class Game:
     mulligans: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     # player -> {card name -> turn first cast/played}
     cards: dict[str, dict[str, int]] = field(default_factory=lambda: defaultdict(dict))
+    # player -> {card name -> turn first used}: cast, played, discarded, triggered, attacked...
+    used: dict[str, dict[str, int]] = field(default_factory=lambda: defaultdict(dict))
+    # player -> {card name -> turn first discarded}
+    discarded: dict[str, dict[str, int]] = field(default_factory=lambda: defaultdict(dict))
     cast_counts: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))
     lands: dict[str, set] = field(default_factory=lambda: defaultdict(set))
     land_drops: dict[str, dict[int, int]] = field(default_factory=lambda: defaultdict(Counter))
@@ -198,6 +206,20 @@ def parse_match(path: str) -> Match | None:
             continue
         if actor is None:
             continue
+
+        if rest.startswith(USE_PREFIXES):
+            card = CARD_RE.search(rest).group(1)
+            if not card.endswith(" Token"):
+                game.used[actor].setdefault(card, turn)
+                if rest.startswith("discards"):
+                    game.discarded[actor].setdefault(card, turn)
+        elif rest.startswith("is being attacked by @["):
+            # the attackers belong to the other player
+            others = [p for p in names if p != actor]
+            if len(others) == 1:
+                for card in CARD_RE.findall(rest):
+                    if not card.endswith(" Token"):
+                        game.used[others[0]].setdefault(card, turn)
 
         if rest.startswith("plays @[") or rest.startswith("casts @["):
             card = CARD_RE.search(rest).group(1)

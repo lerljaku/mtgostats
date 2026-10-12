@@ -257,9 +257,10 @@ def group_records(matches: list[Match], key) -> list[dict]:
 def card_stats(matches: list[Match], side: str = "hero", min_games: int = 1) -> list[dict]:
     """Per-card game win rate (hero's perspective).
 
-    side='hero': cards the hero cast/played. 'Seen' = the card was cast or played that
-    game, compared with games in the same filtered set where it was not.
-    side='opp': cards the opponent cast/played - which cards beat you.
+    side='hero': the hero's cards. 'Used' = the card did something that game (cast,
+    played, discarded, cycled, triggered, activated, attacked), compared with games in
+    the same filtered set where it did not.
+    side='opp': the opponent's cards - which cards beat you.
     """
     games = [(m, g) for m in matches for g in decided_games(m)]
     total = Record()
@@ -267,22 +268,26 @@ def card_stats(matches: list[Match], side: str = "hero", min_games: int = 1) -> 
         total.add(hero_won(m, g))
 
     seen = defaultdict(Record)
-    early = defaultdict(Record)  # cast on or before the player's 3rd turn
+    early = defaultdict(Record)  # first used on or before turn 3
     first_turn = defaultdict(list)
     casts = defaultdict(int)
+    cast_games = defaultdict(int)
+    discarded = defaultdict(Record)
     is_land = set()
-    on_play_seen = defaultdict(Record)
     for m, g in games:
         player = m.hero if side == "hero" else m.opponent
         won = hero_won(m, g)
-        for card, turn in g.cards.get(player, {}).items():
+        cast = g.cards.get(player, {})
+        for card, turn in g.used.get(player, {}).items():
             seen[card].add(won)
             first_turn[card].append(turn)
-            casts[card] += g.cast_counts[player][card]
             if turn <= 3:
                 early[card].add(won)
-            if g.on_play == m.hero:
-                on_play_seen[card].add(won)
+            if card in cast:
+                cast_games[card] += 1
+                casts[card] += g.cast_counts[player][card]
+        for card in g.discarded.get(player, {}):
+            discarded[card].add(won)
         is_land |= g.lands.get(player, set())
 
     rows = []
@@ -294,10 +299,11 @@ def card_stats(matches: list[Match], side: str = "hero", min_games: int = 1) -> 
         rows.append({
             "card": card, "land": card in is_land, "games": rec.n,
             "share": rec.n / total.n if total.n else 0,
-            "casts": casts[card], "wins": rec.wins, "wr": rec.wr, "lo": lo, "hi": hi,
+            "casts": casts[card], "cast_games": cast_games[card], "wins": rec.wins, "wr": rec.wr, "lo": lo, "hi": hi,
             "wr_not": not_seen.wr, "n_not": not_seen.n,
             "delta": (rec.wr - not_seen.wr) if not_seen.wr is not None else None,
             "early_wr": early[card].wr, "early_n": early[card].n,
+            "discard_wr": discarded[card].wr, "discard_n": discarded[card].n,
             "avg_turn": sum(first_turn[card]) / len(first_turn[card]),
         })
     rows.sort(key=lambda r: (-r["games"], r["card"]))

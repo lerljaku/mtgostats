@@ -62,9 +62,12 @@ All pages share filters for **period**, **my deck** and **opponent deck**.
 - **Decks & matchups** – win rates per deck, per opposing deck and per opponent, split by play/draw.
   Click any row to filter the whole app by it.
 - **Cards**
-  - *My cards*: win rate in games where you cast/played a card vs. games where you didn't, the difference,
-    win rate when cast by turn 3, average turn cast.
-  - *Opponents' cards*: your win rate in games where the opponent resolved each card – which cards beat you.
+  - *My cards*: win rate in games where you used a card vs. games where you didn't, the difference,
+    how many of those games you actually cast it, win rate when used by turn 3, average turn first used,
+    and win rate in games where you discarded it (for reanimator and other graveyard decks).
+    A card is *used* when it is cast, played, discarded, cycled, triggers, has an ability activated,
+    or attacks – so graveyard cards like Poxwalkers count when they return, not only when cast.
+  - *Opponents' cards*: your win rate in games where the opponent used each card – which cards beat you.
 - **Matches** – every match with result, decks and duration; each opens a page with the cards both
   players used per game and the full game log.
 
@@ -79,10 +82,11 @@ their three most-played cards.
 - **Small samples lie.** Every win rate shows a 95% Wilson confidence interval
   (the whisker on charts, the *95% CI* column in tables). If it is wide, the number
   can't be trusted yet.
-- **Card stats only see cards that were cast or played.** The logs don't show
-  what you drew or held in hand. Cards cast while already winning, or in long games,
-  look better than they are. Treat a large difference as a hint, not proof.
-- **Filter to one deck on the Cards page.** Otherwise "not seen" mixes in games
+- **Card stats only see cards that did something.** The logs don't show
+  what you drew or held in hand. Cards used while already winning, or in long games,
+  look better than they are, and discards forced by an opponent's spell count as used.
+  Treat a large difference as a hint, not proof.
+- **Filter to one deck on the Cards page.** Otherwise "not used" mixes in games
   played with other decks.
 - **Turns are counted per round**, the way MTGO does: both players have a "Turn 1".
 - Matches where nobody won (e.g. the opponent disconnected and the log has no

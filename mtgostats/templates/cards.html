@@ -14,14 +14,16 @@
 {% if side == 'hero' %}
 <h2>My cards</h2>
 <p class="sub">
-  A card counts as <em>seen</em> in a game when you cast or played it. <strong>WR seen</strong> is your game win rate in those games;
-  <strong>vs. not seen</strong> is the difference from games in the current filter where it never resolved.
-  {% if not filters.deck %}<br>Pick a single deck in "My deck" above - otherwise "not seen" mixes in games from other decks.{% endif %}
+  A card counts as <em>used</em> in a game when it did anything for you: cast, played, discarded, cycled, triggered, had an ability activated, or attacked.
+  <strong>WR when used</strong> is your game win rate in those games; <strong>Difference</strong> compares it with games in the current filter where the card was never used.
+  <strong>Cast in</strong> shows how many of those games you actually cast or played it.
+  <strong>WR discarded</strong> is your win rate in games where you discarded it, with the number of games in brackets - useful for reanimator and graveyard decks.
+  {% if not filters.deck %}<br>Pick a single deck in "My deck" above - otherwise "not used" mixes in games from other decks.{% endif %}
   Baseline game win rate: <strong>{{ pct(baseline.wr) }}</strong> over {{ baseline.n }} games.
 </p>
 {% else %}
 <h2>Opponents' cards</h2>
-<p class="sub">Cards your opponents cast or played. <strong>My WR</strong> is your game win rate in games where they resolved it - low values are the cards that beat you.
+<p class="sub">Cards your opponents used (cast, played, discarded, triggered, activated, attacked with). <strong>My WR</strong> is your game win rate in games where they used it - low values are the cards that beat you.
   Baseline game win rate: <strong>{{ pct(baseline.wr) }}</strong> over {{ baseline.n }} games.</p>
 {% endif %}
 
@@ -29,15 +31,17 @@
 <table class="sortable">
   <thead><tr>
     <th data-sort="text">Card</th>
-    <th class="num" data-sort="num" title="Games where the card was cast or played">Games</th>
-    <th class="num" data-sort="num" title="Share of games in the filter where it was seen">% of games</th>
+    <th class="num" data-sort="num" title="Games where the card was used in any way">Games</th>
+    <th class="num" data-sort="num" title="Share of games in the filter where it was used">% of games</th>
+    <th class="num" data-sort="num" title="Games where it was cast or played, out of the games it was used">Cast in</th>
     <th class="num" data-sort="num" title="Total times cast/played">Casts</th>
-    <th class="num" data-sort="num">{{ 'WR seen' if side == 'hero' else 'My WR' }}</th>
+    <th class="num" data-sort="num">{{ 'WR when used' if side == 'hero' else 'My WR' }}</th>
     <th class="num" data-sort="num" title="95% Wilson confidence interval">95% CI</th>
-    <th class="num" data-sort="num">{{ 'WR not seen' if side == 'hero' else 'My WR otherwise' }}</th>
-    <th class="num" data-sort="num" title="WR seen minus WR not seen, percentage points">Difference</th>
-    <th class="num" data-sort="num" title="Win rate in games where it came down on turn 3 or earlier">WR cast by T3</th>
-    <th class="num" data-sort="num" title="Average turn it first came down">Avg turn</th>
+    <th class="num" data-sort="num">{{ 'WR not used' if side == 'hero' else 'My WR otherwise' }}</th>
+    <th class="num" data-sort="num" title="WR when used minus WR not used, percentage points">Difference</th>
+    <th class="num" data-sort="num" title="Win rate in games where it was first used on turn 3 or earlier">WR used by T3</th>
+    <th class="num" data-sort="num" title="{{ 'Win rate in games where you discarded it (number of games in brackets)' if side == 'hero' else 'Your win rate in games where the opponent discarded it' }}">WR discarded</th>
+    <th class="num" data-sort="num" title="Average turn it was first used">Avg turn</th>
   </tr></thead>
   <tbody>
   {% for r in rows %}
@@ -45,6 +49,7 @@
       <td>{{ r.card }}{% if r.land %} <span class="small">land</span>{% endif %}</td>
       <td class="num">{{ r.games }}</td>
       <td class="num" data-v="{{ r.share }}">{{ pct(r.share) }}</td>
+      <td class="num" data-v="{{ r.cast_games }}">{{ r.cast_games }}</td>
       <td class="num">{{ r.casts }}</td>
       <td class="num" data-v="{{ r.wr }}" title="{{ r.wins }}-{{ r.games - r.wins }}">{{ pct(r.wr) }}<span class="meter"><i style="width: {{ (r.wr * 100)|round(1) }}%"></i></span></td>
       <td class="num muted" data-v="{{ r.lo }}">{{ pct(r.lo) }}–{{ pct(r.hi) }}</td>
@@ -57,13 +62,14 @@
         {% else %}-{% endif %}
       </td>
       <td class="num {{ 'muted' if r.early_n < 5 }}" data-v="{{ r.early_wr if r.early_wr is not none else '' }}">{{ pct(r.early_wr) }} <span class="small">({{ r.early_n }})</span></td>
+      <td class="num {{ 'muted' if r.discard_n < 5 }}" data-v="{{ r.discard_wr if r.discard_wr is not none else '' }}">{{ pct(r.discard_wr) }} <span class="small">({{ r.discard_n }})</span></td>
       <td class="num" data-v="{{ r.avg_turn }}">{{ r.avg_turn|round(1) }}</td>
     </tr>
   {% else %}
-    <tr><td colspan="10" class="muted">No cards meet the minimum-games threshold for this filter.</td></tr>
+    <tr><td colspan="12" class="muted">No cards meet the minimum-games threshold for this filter.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
-<p class="small">Caveat: "seen" is biased - long games show more cards, and cards you cast while winning look better than they are. Read the difference as a pointer, not proof; the confidence interval shows how much the sample can carry. Each half of the difference bar spans 0 to 50 pp (blue = better when seen, red = worse).</p>
+<p class="small">Caveat: "used" is biased - long games show more cards, and cards you use while winning look better than they are. Discards forced by an opponent's spell also count as used. Read the difference as a pointer, not proof; the confidence interval shows how much the sample can carry. Each half of the difference bar spans 0 to 50 pp (blue = better when used, red = worse).</p>
 {% endblock %}
