@@ -28,6 +28,7 @@ MATCH_WIN_RE = re.compile(r"wins the match (\d+)-(\d+)")
 USE_PREFIXES = ("casts @[", "plays @[", "discards @[", "cycles @[",
                 "puts a triggered ability from @[", "activates an ability of @[",
                 "chooses to use @[")
+RETURNED_FROM_GY_RE = re.compile(r"^@P@\[(.+?)@:\d+,\d+:@\] is returned to (.+)'s hand from the graveyard")
 
 NUMBER_WORDS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
                 "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
@@ -104,6 +105,8 @@ class Game:
     used: dict[str, dict[str, int]] = field(default_factory=lambda: defaultdict(dict))
     # player -> {card name -> turn first discarded}
     discarded: dict[str, dict[str, int]] = field(default_factory=lambda: defaultdict(dict))
+    # player -> {card name -> turn first seen in their graveyard}
+    graveyard: dict[str, dict[str, int]] = field(default_factory=lambda: defaultdict(dict))
     cast_counts: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))
     lands: dict[str, set] = field(default_factory=lambda: defaultdict(set))
     land_drops: dict[str, dict[int, int]] = field(default_factory=lambda: defaultdict(Counter))
@@ -150,6 +153,26 @@ def _actor(text: str, players: list[str]) -> tuple[str | None, str]:
         if body.startswith(name + " ") or body.startswith(name + "'"):
             return name, body[len(name):].lstrip()
     return None, body
+
+
+def _graveyard_cards(rest: str) -> list[str]:
+    """Cards the acting player's line shows going to (or being in) their own graveyard.
+    MTGO doesn't log creatures dying or spells resolving, so those are not covered."""
+    if rest.startswith(("discards @[", "sacrifices @[")):
+        return CARD_RE.findall(rest)[:1]
+    if rest.startswith("mills @["):
+        return CARD_RE.findall(rest)
+    if rest.startswith("puts @[") and "into their graveyard" in rest:
+        return CARD_RE.findall(rest.split("into their graveyard")[0])
+    if rest.startswith("casts @[") and "from the graveyard" in rest.split(" targeting ")[0]:
+        return CARD_RE.findall(rest)[:1]
+    if rest.startswith("puts a triggered ability from @["):
+        ability, _, targets = rest.partition(" targeting ")
+        if "this card from your graveyard" in ability or "this card is in your graveyard" in ability:
+            return CARD_RE.findall(ability)[:1]  # Bloodghast, Poxwalkers, Squee...
+        if "from your graveyard" in ability or "in your graveyard" in ability:
+            return CARD_RE.findall(targets)      # reanimation / recursion targets
+    return []
 
 
 def plain(text: str) -> str:
@@ -205,7 +228,13 @@ def parse_match(path: str) -> Match | None:
                 game.turns = max(game.turns, turn)
             continue
         if actor is None:
+            if (m := RETURNED_FROM_GY_RE.match(text)) and m.group(2) in names:
+                game.graveyard[m.group(2)].setdefault(m.group(1), turn)
             continue
+
+        for card in _graveyard_cards(rest):
+            if not card.endswith(" Token"):
+                game.graveyard[actor].setdefault(card, turn)
 
         if rest.startswith(USE_PREFIXES):
             card = CARD_RE.search(rest).group(1)

@@ -64,7 +64,10 @@ All pages share filters for **period**, **my deck** and **opponent deck**.
 - **Cards**
   - *My cards*: win rate in games where you used a card vs. games where you didn't, the difference,
     how many of those games you actually cast it, win rate when used by turn 3, average turn first used,
-    and win rate in games where you discarded it (for reanimator and other graveyard decks).
+    win rate in games where you discarded it, and win rate in games where it was in your graveyard
+    (discarded, milled, sacrificed, surveilled, or cast/returned from there). The last two are for
+    reanimator and other graveyard decks; MTGO doesn't log creatures dying or spells resolving, so
+    those don't count toward "in graveyard".
     A card is *used* when it is cast, played, discarded, cycled, triggers, has an ability activated,
     or attacks – so graveyard cards like Poxwalkers count when they return, not only when cast.
   - *Opponents' cards*: your win rate in games where the opponent used each card – which cards beat you.

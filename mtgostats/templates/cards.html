@@ -18,6 +18,8 @@
   <strong>WR when used</strong> is your game win rate in those games; <strong>Difference</strong> compares it with games in the current filter where the card was never used.
   <strong>Cast in</strong> shows how many of those games you actually cast or played it.
   <strong>WR discarded</strong> is your win rate in games where you discarded it, with the number of games in brackets - useful for reanimator and graveyard decks.
+  <strong>WR in graveyard</strong> widens that to any way the log shows it in your graveyard: discarded, milled, sacrificed, put there by surveil and similar, or cast or returned from it.
+  MTGO doesn't log creatures dying or spells resolving, so those don't count.
   {% if not filters.deck %}<br>Pick a single deck in "My deck" above - otherwise "not used" mixes in games from other decks.{% endif %}
   Baseline game win rate: <strong>{{ pct(baseline.wr) }}</strong> over {{ baseline.n }} games.
 </p>
@@ -41,6 +43,7 @@
     <th class="num" data-sort="num" title="WR when used minus WR not used, percentage points">Difference</th>
     <th class="num" data-sort="num" title="Win rate in games where it was first used on turn 3 or earlier">WR used by T3</th>
     <th class="num" data-sort="num" title="{{ 'Win rate in games where you discarded it (number of games in brackets)' if side == 'hero' else 'Your win rate in games where the opponent discarded it' }}">WR discarded</th>
+    <th class="num" data-sort="num" title="Win rate in games where it was seen in {{ 'your' if side == 'hero' else 'the opponent\'s' }} graveyard: discarded, milled, sacrificed, surveilled/put there, cast or returned from there">WR in graveyard</th>
     <th class="num" data-sort="num" title="Average turn it was first used">Avg turn</th>
   </tr></thead>
   <tbody>
@@ -63,10 +66,11 @@
       </td>
       <td class="num {{ 'muted' if r.early_n < 5 }}" data-v="{{ r.early_wr if r.early_wr is not none else '' }}">{{ pct(r.early_wr) }} <span class="small">({{ r.early_n }})</span></td>
       <td class="num {{ 'muted' if r.discard_n < 5 }}" data-v="{{ r.discard_wr if r.discard_wr is not none else '' }}">{{ pct(r.discard_wr) }} <span class="small">({{ r.discard_n }})</span></td>
+      <td class="num {{ 'muted' if r.gy_n < 5 }}" data-v="{{ r.gy_wr if r.gy_wr is not none else '' }}">{{ pct(r.gy_wr) }} <span class="small">({{ r.gy_n }})</span></td>
       <td class="num" data-v="{{ r.avg_turn }}">{{ r.avg_turn|round(1) }}</td>
     </tr>
   {% else %}
-    <tr><td colspan="12" class="muted">No cards meet the minimum-games threshold for this filter.</td></tr>
+    <tr><td colspan="13" class="muted">No cards meet the minimum-games threshold for this filter.</td></tr>
   {% endfor %}
   </tbody>
 </table>

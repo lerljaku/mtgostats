@@ -273,6 +273,7 @@ def card_stats(matches: list[Match], side: str = "hero", min_games: int = 1) -> 
     casts = defaultdict(int)
     cast_games = defaultdict(int)
     discarded = defaultdict(Record)
+    in_graveyard = defaultdict(Record)
     is_land = set()
     for m, g in games:
         player = m.hero if side == "hero" else m.opponent
@@ -288,6 +289,8 @@ def card_stats(matches: list[Match], side: str = "hero", min_games: int = 1) -> 
                 casts[card] += g.cast_counts[player][card]
         for card in g.discarded.get(player, {}):
             discarded[card].add(won)
+        for card in g.graveyard.get(player, {}):
+            in_graveyard[card].add(won)
         is_land |= g.lands.get(player, set())
 
     rows = []
@@ -304,6 +307,7 @@ def card_stats(matches: list[Match], side: str = "hero", min_games: int = 1) -> 
             "delta": (rec.wr - not_seen.wr) if not_seen.wr is not None else None,
             "early_wr": early[card].wr, "early_n": early[card].n,
             "discard_wr": discarded[card].wr, "discard_n": discarded[card].n,
+            "gy_wr": in_graveyard[card].wr, "gy_n": in_graveyard[card].n,
             "avg_turn": sum(first_turn[card]) / len(first_turn[card]),
         })
     rows.sort(key=lambda r: (-r["games"], r["card"]))
